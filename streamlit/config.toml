@@ -1,0 +1,6 @@
+[server]
+address = "localhost"       # only this computer can open the app (there is no login yet, see step 14)
+maxUploadSize = 50          # MB
+
+[browser]
+gatherUsageStats = false    # do not send usage statistics to Streamlit

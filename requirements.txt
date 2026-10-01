@@ -1,0 +1,18 @@
+# CIA application: the computer that runs the web app and the scripts (Python 3.11 or later).
+# The GPU machine has its own list: model_server/requirements.txt
+python-dotenv
+httpx
+tenacity
+openai                  # Gemini and Ollama, both through the OpenAI-compatible API
+qdrant-client>=1.10     # Query API with prefetch and fusion: hybrid search (step 15)
+streamlit
+docling                 # PDF, Word and PowerPoint reading; EasyOCR for scanned pages
+pypdfium2
+beautifulsoup4
+openpyxl
+transformers            # tokenizer of the embedding model, to measure chunk sizes
+
+# Only for scripts/naive_read.py (the comparison in step 5A)
+pandas
+python-docx
+python-pptx

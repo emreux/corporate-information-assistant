@@ -1,0 +1,531 @@
+# CIA evaluation questions (step 12). Numbers 1-26 follow document_guide.md; 27-36 were added in step 12,
+# 37-43 in step 15 (look-ups by code, number or name: where keyword search is needed), 44-46 in step 16
+# (questions the documents have nothing on) and 47-49 in step 17 (follow-up questions in a conversation).
+#
+# Fields of a question:
+#   id, type, role, question, expected  required. role is a key of ROLES in config.py.
+#                                         expected is the answer key the LLM judge compares against:
+#                                         what the answer must say, with optional context in (parentheses).
+#   answerable    false when the documents (visible to this role) do not contain the answer
+#   sources       files that contain the answer; one of them must be retrieved
+#   evidence      facts that must appear in the retrieved chunks (the LLM cannot answer without them);
+#                 a fact is a phrase, or a list of phrases of which any one proves it: [["a", "b"], "c"]
+#   must_include  phrases that must all appear in the answer
+#   any_of        phrases of which at least one must appear in the answer
+#   must_not      phrases that must not appear in the answer
+#   forbidden     phrases that must appear neither in the answer nor in what the LLM was shown (leak test)
+#   history       earlier questions of the same conversation, oldest first (the question is rewritten with them)
+#   known_gap     a failure we expect (not fixed in this project); shown separately in the report
+#   off_topic     true when nothing in the documents is about the question: the search must find nothing,
+#                 so that the LLM is not asked at all (step 16). Needs answerable = false.
+#
+# Phrases ignore case, extra spaces and Markdown bold, and match at the start of a word: "22 gün" matches
+# "22 gündür" (Turkish suffixes), but "11" does not match inside "M-1011". Keep them short: one fact each.
+
+# For unanswerable questions without their own any_of: the answer must say the information is missing.
+not_found_phrases = [
+    "bilgi yok", "bilgi bulunmuyor", "bilgi bulunmamaktadır", "bilgi yer almıyor", "yer almamaktadır",
+    "yer almıyor", "içermiyor", "içermemektedir", "belirtilmemiş", "belirtilmemektedir", "bulunamadı",
+    "no relevant documents were found",
+]
+
+[[question]]
+id = 1
+type = "fact"
+role = "employee"
+question = "8 yıllık bir çalışanın kaç gün yıllık izni var?"
+expected = "22 gün. (2025 politikasındaki 20 gün artık geçerli değil.)"
+sources = ["IK_Politikasi_2026.pdf"]
+evidence = ["22 gün"]
+must_include = ["22 gün"]
+must_not = ["20 gün"]
+
+[[question]]
+id = 2
+type = "recency"
+role = "employee"
+question = "Yemek kartına ne kadar yükleniyor?"
+expected = "Aylık 3.250 TL. (Her ayın ilk iş günü yüklenir; eski tutar 2.750 TL artık geçerli değil.)"
+sources = ["Yan_Haklar_ve_Uzaktan_Calisma_Yonetmeligi.docx"]
+evidence = ["3.250 TL"]
+must_include = ["3.250"]
+must_not = ["2.750"]
+
+[[question]]
+id = 3
+type = "calculation"
+role = "employee"
+question = "8 yıllık kıdemi olan bir müdürün yıllık izni kaç gün?"
+expected = "24 gün. (Kıdeme göre 22 gün, yöneticilere yılda 2 gün ilave izin.)"
+sources = ["IK_Politikasi_2026.pdf"]
+evidence = ["2 gün ilave"]
+must_include = ["24 gün"]
+
+[[question]]
+id = 4
+type = "trap"
+role = "employee"
+question = "8 yıllık bir takım liderine ilave izin verilir mi?"
+expected = "Hayır, takım liderleri yönetici tanımına dahil değildir. (Kıdemine göre 22 gün yıllık izni vardır; 2 günlük ilave izin yalnızca müdür ve üzerine verilir.)"
+sources = ["IK_Politikasi_2026.pdf"]
+evidence = [["Takım liderleri bu tanıma dahil değildir", "müdür ve üzeri"]]
+any_of = ["hayır", "verilmez", "verilmemektedir", "dahil değil", "girmez", "girmediği", "faydalanamaz",
+          "yararlanamaz", "alamaz", "hak kazanamaz", "kapsamında değil"]
+must_not = ["24 gün"]
+
+[[question]]
+id = 5
+type = "negation"
+role = "employee"
+question = "Deneme süresindeyim, evden çalışabilir miyim?"
+expected = "Hayır, deneme süresindeki çalışanlar uzaktan çalışamaz."
+sources = ["Yan_Haklar_ve_Uzaktan_Calisma_Yonetmeligi.docx", "Sik_Sorulan_Sorular.html"]
+evidence = ["uzaktan çalışamaz"]
+any_of = ["hayır", "çalışamaz"]
+
+[[question]]
+id = 6
+type = "negation"
+role = "employee"
+question = "Deneme süresinde mazeret izni kullanabilir miyim?"
+expected = "Evet, mazeret izinleri deneme süresinde de kullanılabilir. (Yıllık izin ise kullanılamaz.)"
+sources = ["IK_Politikasi_2026.pdf", "Sik_Sorulan_Sorular.html"]
+evidence = ["mazeret izin"]
+any_of = ["evet", "kullanabilir", "kullanılabilir"]
+
+[[question]]
+id = 7
+type = "negation"
+role = "employee"
+question = "SOC L1 analistiyim, uzaktan çalışabilir miyim?"
+expected = "Hayır, SOC vardiya ekibindeki L1 analistler uzaktan çalışamaz. (L2 ve L3 analistler nöbetçi olmadıkları günlerde genel kurala tabidir.)"
+sources = ["Yan_Haklar_ve_Uzaktan_Calisma_Yonetmeligi.docx"]
+evidence = ["L1 analistler uzaktan çalışamaz"]
+any_of = ["hayır", "çalışamaz"]
+
+[[question]]
+id = 8
+type = "paraphrase"
+role = "employee"
+question = "Evden çalışmak için masa sandalye almaya destek var mı?"
+expected = "Evet, uzaktan çalışma hakkı başlayanlara ev ofis kurulumu için tek seferlik 5.000 TL destek verilir (ayrıca aylık 400 TL internet desteği)."
+sources = ["Yan_Haklar_ve_Uzaktan_Calisma_Yonetmeligi.docx"]
+evidence = ["5.000 TL"]
+must_include = ["5.000"]
+
+[[question]]
+id = 9
+type = "code"
+role = "employee"
+question = "vpn err 203 aldım napcam"
+expected = "Kalkan Portal > Güvenlik > Sertifikalarım ekranından sertifikayı yenileyin, sonra Kalkan Connect'i tamamen kapatıp yeniden başlatın. (VPN-ERR-203, kullanıcı sertifikasının süresinin dolduğunu gösterir.)"
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["Sertifikalarım"]
+must_include = ["sertifika"]
+
+[[question]]
+id = 10
+type = "code"
+role = "employee"
+question = "VPN-ERR-204 ne demek?"
+expected = "İstemcinin DNS yapılandırması hatalı. (Kullanıcı çözemez; BT Destek'e 'Ağ' kategorisinde, hata ekranının görüntüsüyle talep açılır.)"
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["DNS yapılandırması"]
+must_include = ["DNS"]
+
+[[question]]
+id = 11
+type = "code"
+role = "employee"
+question = "KLK-IT-09 formu ne için kullanılır?"
+expected = "Yazılım ve lisans talepleri için: Yazılım Lisans Talep Formu. (Donanım talepleri ise KLK-IT-07 ile yapılır.)"
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["KLK-IT-09 Yazılım Lisans Talep Formu"]
+must_include = ["yazılım"]
+
+[[question]]
+id = 12
+type = "code"
+role = "employee"
+question = "KLK-SOC-110 paketinin aylık ücreti ne kadar?"
+expected = "Aylık 85.000 TL (KDV hariç)."
+sources = ["Hizmet_Paketleri_ve_Fiyatlar.xlsx"]
+evidence = ["85.000 TL"]
+must_include = ["85.000"]
+must_not = ["45.000", "160.000"]
+
+[[question]]
+id = 13
+type = "name"
+role = "employee"
+question = "Murat Kaya'nın dahili numarası kaç?"
+expected = "4401. (Murat Kaya SOC Müdürüdür; satış ekibindeki Murat Kayaalp ile karıştırılmamalı.)"
+sources = ["SOC_Olay_Mudahale_Playbooklari.pdf"]
+evidence = ["4401"]
+must_include = ["4401"]
+
+[[question]]
+id = 14
+type = "jargon"
+role = "employee"
+question = "PYS'ye hedeflerimi ne zamana kadar girmeliyim?"
+expected = "Her yıl en geç 31 Ocak'a kadar."
+sources = ["IK_Politikasi_2026.pdf"]
+evidence = ["31 Ocak"]
+must_include = ["31 Ocak"]
+
+[[question]]
+id = 15
+type = "negation"
+role = "employee"
+question = "Fidye yazılımı bulaşan bilgisayarı kapatmalı mıyım?"
+expected = "Hayır, cihaz kapatılmamalı ve yeniden başlatılmamalı. (EDR ile ağdan izole edilir; bellek imajı alınana kadar açık kalır.)"
+sources = ["SOC_Olay_Mudahale_Playbooklari.pdf"]
+evidence = ["kesinlikle kapatmayın"]
+any_of = ["hayır", "kapatmayın", "kapatılmamalı", "kapatmamalısınız"]
+
+[[question]]
+id = 16
+type = "multi_part"
+role = "employee"
+question = "Yemek kartı ne kadar ve maaşlar ayın kaçında yatıyor?"
+expected = "Yemek kartı aylık 3.250 TL; maaşlar her ayın 15'inde yatar (hafta sonu veya tatile denk gelirse bir önceki iş günü)."
+sources = ["Yan_Haklar_ve_Uzaktan_Calisma_Yonetmeligi.docx", "IK_Politikasi_2026.pdf", "Sik_Sorulan_Sorular.html"]
+evidence = ["3.250 TL", "15'inde"]
+must_include = ["3.250", "15'i"]
+
+[[question]]
+id = 17
+type = "multi_part"
+role = "employee"
+question = "Parola en az kaç karakter olmalı ve kaç günde bir değişir?"
+expected = "En az 14 karakter; 90 günde bir değiştirilir."
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["14 karakter", "90 günde"]
+must_include = ["14 karakter", "90 gün"]
+
+[[question]]
+id = 18
+type = "table"
+role = "employee"
+question = "Kamu kurumu indirimi taahhüt indirimiyle birleşir mi?"
+expected = "Hayır. Kamu kurumu indirimi (%10) diğer indirimlerle birleştirilemez."
+sources = ["Hizmet_Paketleri_ve_Fiyatlar.xlsx"]
+evidence = ["Diğer indirimlerle birleştirilemez"]
+any_of = ["hayır", "birleştirilemez", "birleşmez"]
+
+[[question]]
+id = 19
+type = "ocr"
+role = "employee"
+question = "Yeni SIEM geçişi için ne kadar bütçe onaylandı?"
+expected = "4.200.000 TL (12.09.2024 yönetim kurulu toplantısı)."
+sources = ["Yonetim_Kurulu_Tutanagi_2024-09_TARANMIS.pdf"]
+evidence = ["4.200.000"]
+must_include = ["4.200.000"]
+
+[[question]]
+id = 20
+type = "speaker_notes"
+role = "employee"
+question = "Şirketin 2026 sonu müşteri hedefi nedir?"
+expected = "200 aktif müşteri. (Ayrıca 230 çalışan hedefi var; hedefler henüz kamuya açıklanmadı.)"
+sources = ["Kalkan_Sirket_Tanitimi_2026.pptx"]
+evidence = ["200 aktif müşteri"]
+must_include = ["200"]
+
+[[question]]
+id = 21
+type = "follow_up"
+role = "employee"
+history = ["Çalışanların yıllık izni kaç gün?"]
+question = "Peki yöneticiler için?"
+expected = "Yöneticilere, kıdeme göre belirlenen süreye ek olarak yılda 2 gün ilave izin verilir. (Yönetici: müdür ve üzeri; örneğin 8 yıllık bir müdürün izni 24 gündür.)"
+sources = ["IK_Politikasi_2026.pdf"]
+evidence = ["2 gün ilave"]
+must_include = ["ilave"]
+
+[[question]]
+id = 22
+type = "unanswerable"
+role = "employee"
+question = "İzmir ofisinde otopark var mı?"
+expected = "Dokümanlarda İzmir ofisinin otoparkıyla ilgili bilgi yok (yalnızca Maslak ve Ankara için bilgi var)."
+answerable = false
+must_not = ["%30", "anlaşmalı"]
+
+[[question]]
+id = 23
+type = "unanswerable"
+role = "employee"
+question = "Şirketin borsa değeri ne kadar?"
+expected = "Dokümanlarda bu bilgi yok."
+answerable = false
+
+[[question]]
+id = 24
+type = "permission"
+role = "intern"
+question = "Müdürlerin maaş aralığı ne kadar?"
+expected = "Bu kullanıcının görebildiği dokümanlarda bu bilgi yok. (Hiçbir maaş rakamı verilmemeli.)"
+answerable = false
+forbidden = ["250.000", "250000", "K4 - Müdür"]
+
+[[question]]
+id = 25
+type = "permission"
+role = "manager"
+question = "Müdürlerin maaş aralığı ne kadar?"
+expected = "Brüt aylık 180.000 - 250.000 TL. (K4 - Müdür kademesi; yıllık prim hedefi %15.)"
+sources = ["Yonetici_Maas_Skalasi_2026.xlsx"]
+evidence = ["K4 - Müdür"]
+must_include = ["180.000", "250.000"]
+
+[[question]]
+id = 26
+type = "aggregation"
+role = "employee"
+question = "Müşteri listesinde durumu 'Aktif' olan kaç firma var?"
+expected = "11 firma. (Listede 14 'Aktif' satır var, çünkü bazı firmaların birden fazla paketi var. Firmaları saymak yetmez, toplam sayı söylenmeli.)"
+sources = ["Musteri_Listesi.csv"]
+must_include = ["11"]
+known_gap = "counting rows needs a table query tool (an agent, part 2), not text search"
+
+[[question]]
+id = 27
+type = "code"
+role = "employee"
+question = "VPN-ERR-230 hatası ne anlama geliyor?"
+expected = "Çok faktörlü doğrulama, yani MFA, zaman aşımına uğradı. (Çözüm: telefonun saat ayarını 'otomatik' yapıp Authenticator'da zaman senkronizasyonu çalıştırmak; sorun sürerse BT Destek.)"
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["zaman aşımına uğradı"]
+must_include = ["MFA"]
+
+[[question]]
+id = 28
+type = "code"
+role = "employee"
+question = "KLK-EDR-210 paketi kaç uç noktayı kapsıyor ve aylık ücreti ne kadar?"
+expected = "1.000 uç noktaya kadar; aylık 95.000 TL. (KDV hariç. KLK-EDR-200 ise 250 uç nokta ve 38.000 TL'dir.)"
+sources = ["Hizmet_Paketleri_ve_Fiyatlar.xlsx"]
+evidence = ["1.000 uç noktaya kadar"]
+must_include = ["1.000", "95.000"]
+
+[[question]]
+id = 29
+type = "negation"
+role = "employee"
+question = "Annemi özel sağlık sigortama ekletebilir miyim?"
+expected = "Anne ve baba şirket poliçesinin kapsamında değildir; ancak çalışan primi kendisi ödemek kaydıyla onları grup poliçesine ekletebilir."
+sources = ["Yan_Haklar_ve_Uzaktan_Calisma_Yonetmeligi.docx"]
+evidence = ["primi kendisi ödemek kaydıyla"]
+must_include = ["prim"]
+
+[[question]]
+id = 30
+type = "negation"
+role = "employee"
+question = "Misafirimi SOC katına çıkarabilir miyim?"
+expected = "Hayır, SOC katına misafir kabul edilmez."
+sources = ["Sik_Sorulan_Sorular.html"]
+evidence = ["SOC katına misafir kabul edilmez"]
+any_of = ["hayır", "kabul edilmez", "alınmaz"]
+
+[[question]]
+id = 31
+type = "negation"
+role = "employee"
+question = "Fidye yazılımı olayında saldırganla iletişime geçip pazarlık yapabilir miyiz?"
+expected = "Hayır, SOC ekibi saldırganlarla hiçbir koşulda iletişime geçmez. (Fidye ödeme kararını yalnızca müşterinin üst yönetimi ve hukuk danışmanları verir.)"
+sources = ["SOC_Olay_Mudahale_Playbooklari.pdf"]
+evidence = ["hiçbir koşulda iletişime geçmez"]
+any_of = ["hayır", "iletişime geçmez"]
+
+[[question]]
+id = 32
+type = "multi_part"
+role = "employee"
+question = "Deneme süresi ne kadar ve bu sürede yıllık izin kullanabilir miyim?"
+expected = "Deneme süresi 2 aydır; bu sürede yıllık izin kullanılamaz. (Mazeret izinleri kullanılabilir.)"
+sources = ["IK_Politikasi_2026.pdf", "Sik_Sorulan_Sorular.html"]
+evidence = ["2 aydır", "yıllık izin kullanamaz"]
+must_include = ["2 ay"]
+
+[[question]]
+id = 33
+type = "same_number"
+role = "intern"
+question = "Ankara ofisi için aylık kira üst limiti ne kadar belirlendi?"
+expected = "Aylık 180.000 TL. (12.09.2024 yönetim kurulu tutanağı; taranmış belge olduğu için okuma hatası içerebilir.)"
+sources = ["Yonetim_Kurulu_Tutanagi_2024-09_TARANMIS.pdf"]
+evidence = ["kira üst limiti", "180.000"]
+must_include = ["180.000"]
+forbidden = ["250.000", "250000", "K4 - Müdür"]
+known_gap = "OCR: reading the scanned minutes dropped the line with 'kira üst limiti' (needs better OCR)"
+
+[[question]]
+id = 34
+type = "unanswerable"
+role = "employee"
+question = "Ankara ofisinde yemekhane var mı?"
+expected = "Dokümanlarda Ankara ofisinin yemekhanesiyle ilgili bilgi yok (yalnızca Maslak ofisinde yemekhane olmadığı yazıyor)."
+answerable = false
+
+[[question]]
+id = 35
+type = "table_split"
+role = "employee"
+question = "P4 seviyesindeki bir olayda ilk yanıt süresi ne kadar?"
+expected = "1 iş günü. (Kontrol altına alma hedefi 5 iş günü.)"
+sources = ["SOC_Olay_Mudahale_Playbooklari.pdf"]
+evidence = ["P4 - Düşük"]
+must_include = ["1 iş günü"]
+
+[[question]]
+id = 36
+type = "recency"
+role = "employee"
+question = "Yıllık izin talebimi ne kadar önceden ve nereden yapmalıyım?"
+expected = "En az 10 iş günü önce, Kalkan Portal'dan (İzin Taleplerim ekranı). (5 iş gününden uzun izinlerde İK onayı da gerekir. Eski form ve e-posta yöntemi artık geçerli değil.)"
+sources = ["IK_Politikasi_2026.pdf"]
+evidence = ["10 iş günü önce"]
+must_include = ["10 iş günü", "Kalkan Portal"]
+must_not = ["KLK-IK-F03", "2 hafta"]
+
+[[question]]
+id = 37
+type = "lookup"
+role = "employee"
+question = "M-1014 numaralı müşteri hangi firma?"
+expected = "Yeşilvadi Belediyesi. (Ankara'da, KLK-SOC-110 paketiyle aktif müşteri.)"
+sources = ["Musteri_Listesi.csv"]
+evidence = ["M-1014 | Firma: Yeşilvadi Belediyesi"]
+must_include = ["Yeşilvadi"]
+
+[[question]]
+id = 38
+type = "lookup"
+role = "employee"
+question = "4401 numaralı dahili hat kime ait?"
+expected = "Murat Kaya'ya. (SOC Müdürü; satıştaki Murat Kayaalp ile karıştırılmamalı.)"
+sources = ["SOC_Olay_Mudahale_Playbooklari.pdf"]
+evidence = ["Murat Kaya | 4401"]
+must_include = ["Murat Kaya"]
+
+[[question]]
+id = 39
+type = "lookup"
+role = "employee"
+question = "Dahili 2020'yi aradığımda hangi birime ulaşırım?"
+expected = "BT Destek'e. (Hafta içi 08:00-20:00 arasında hizmet verir.)"
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["Dahili 2020"]
+must_include = ["BT"]
+
+[[question]]
+id = 40
+type = "code"
+role = "employee"
+question = "KLK-PT-310 nedir?"
+expected = "Sızma Testi - İç Ağ paketi. (250 IP adresine kadar iç ağ testi ve Active Directory analizi; 180.000 TL, tek seferlik.)"
+sources = ["Hizmet_Paketleri_ve_Fiyatlar.xlsx"]
+evidence = ["KLK-PT-310 | Paket Adı: Sızma Testi - İç Ağ"]
+must_include = ["İç Ağ"]
+
+[[question]]
+id = 41
+type = "code"
+role = "employee"
+question = "VPN-ERR301 hatası alıyorum, ne yapmalıyım?"
+expected = "Eş zamanlı bağlantı lisans limiti aşılmış: başka bir cihazda açık VPN oturumunuz varsa kapatın. (Sorun sürerse BT Destek'e bildirin.)"
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["VPN-ERR-301"]
+must_include = ["oturum"]
+
+[[question]]
+id = 42
+type = "lookup"
+role = "employee"
+question = "Sarp Savunma'nın sözleşmesi ne zaman bitiyor?"
+expected = "31.08.2028. (Sarp Savunma Elektronik A.Ş., KLK-SOC-120 paketi.)"
+sources = ["Musteri_Listesi.csv"]
+evidence = ["Sarp Savunma Elektronik"]
+must_include = ["31.08.2028"]
+
+[[question]]
+id = 43
+type = "jargon"
+role = "employee"
+question = "EPS kısaltması ne anlama geliyor?"
+expected = "Saniyedeki olay sayısı (events per second)."
+sources = ["Hizmet_Paketleri_ve_Fiyatlar.xlsx"]
+evidence = ["Saniyedeki olay sayısı"]
+must_include = ["saniye"]
+
+# --- Step 16: nothing in the documents is about these. The first two must not reach the LLM at all;
+# the third is about pay, so it may reach it, and then the LLM must not answer from its own knowledge.
+
+[[question]]
+id = 44
+type = "off_topic"
+role = "employee"
+question = "Python'da bir listeyi nasıl sıralarım?"
+expected = "Dokümanlarda bu bilgi yok. (Şirket dokümanlarıyla ilgisiz bir soru; model kendi bilgisinden cevap vermemeli.)"
+answerable = false
+off_topic = true
+must_not = ["sort"]
+
+[[question]]
+id = 45
+type = "off_topic"
+role = "employee"
+question = "Bu hafta sonu İstanbul'da hava nasıl olacak?"
+expected = "Dokümanlarda bu bilgi yok."
+answerable = false
+off_topic = true
+
+[[question]]
+id = 46
+type = "unanswerable"
+role = "employee"
+question = "Türkiye'de asgari ücret ne kadar?"
+expected = "Dokümanlarda bu bilgi yok. (Model kendi bilgisinden bir tutar vermemeli.)"
+answerable = false
+
+# --- Step 17: follow-up questions. Without the conversation, 47 and 49 cannot be understood;
+# 48 changes the topic and must not be "rewritten" into the earlier one.
+
+[[question]]
+id = 47
+type = "follow_up"
+role = "employee"
+history = ["VPN-ERR-204 hatası ne anlama geliyor?"]
+question = "Bunu kendim çözebilir miyim?"
+expected = "Hayır, kullanıcı tarafından çözülemez. (BT Destek'e 'Ağ' kategorisinde, hata ekranının görüntüsüyle talep açılır.)"
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["Kullanıcı tarafından çözülemez"]
+any_of = ["hayır", "çözülemez", "çözemezsiniz", "çözemez", "mümkün değil"]
+
+[[question]]
+id = 48
+type = "follow_up"
+role = "employee"
+history = ["Yemek kartına ne kadar yükleniyor?"]
+question = "Parolam en az kaç karakter olmalı?"
+expected = "En az 14 karakter."
+sources = ["BT_Destek_Prosedurleri.docx"]
+evidence = ["14 karakter"]
+must_include = ["14"]
+must_not = ["3.250"]
+
+[[question]]
+id = 49
+type = "follow_up"
+role = "employee"
+history = ["SOC Müdürü kim?"]
+question = "Dahili numarası kaç?"
+expected = "4401. (SOC Müdürü Murat Kaya.)"
+sources = ["SOC_Olay_Mudahale_Playbooklari.pdf"]
+evidence = ["4401"]
+must_include = ["4401"]
+must_not = ["2020"]

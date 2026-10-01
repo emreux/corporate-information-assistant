@@ -1,0 +1,14 @@
+# Qdrant for CIA, reachable only from this computer (127.0.0.1).
+#   docker compose up -d
+# Hybrid search needs Qdrant 1.10 or later.
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage:

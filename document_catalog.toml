@@ -1,0 +1,64 @@
+# Document catalog: the decisions a person makes about each document.
+#
+# file            File name exactly as in the documents folder.
+# access_level    "internal" (every employee, interns included) or "restricted" (management and HR).
+# status          "active" (current) or "superseded" (another document replaced it). Default: "active".
+# effective_date  Date the document took effect, written as 2026-01-01. Leave it out if unknown.
+# replaced_by     Only for superseded documents: the file that replaced this one.
+#
+# A file that is missing here is treated as "restricted" until someone adds it.
+# A wrong value stops the program: these labels decide who can see what.
+
+[[document]]
+file = "IK_Politikasi_2025.pdf"
+access_level = "internal"
+status = "superseded"
+effective_date = 2025-01-01
+replaced_by = "IK_Politikasi_2026.pdf"
+
+[[document]]
+file = "IK_Politikasi_2026.pdf"
+access_level = "internal"
+effective_date = 2026-01-01
+
+[[document]]
+file = "Yan_Haklar_ve_Uzaktan_Calisma_Yonetmeligi.docx"
+access_level = "internal"
+effective_date = 2026-01-01
+
+[[document]]
+file = "BT_Destek_Prosedurleri.docx"
+access_level = "internal"
+effective_date = 2026-02-01
+
+[[document]]
+file = "SOC_Olay_Mudahale_Playbooklari.pdf"
+access_level = "internal"
+effective_date = 2026-03-15
+
+[[document]]
+file = "Hizmet_Paketleri_ve_Fiyatlar.xlsx"
+access_level = "internal"
+effective_date = 2026-07-01
+
+[[document]]
+file = "Musteri_Listesi.csv"
+access_level = "internal"
+
+[[document]]
+file = "Yonetici_Maas_Skalasi_2026.xlsx"
+access_level = "restricted"
+
+[[document]]
+file = "Kalkan_Sirket_Tanitimi_2026.pptx"
+access_level = "internal"
+
+[[document]]
+file = "Sik_Sorulan_Sorular.html"
+access_level = "internal"
+effective_date = 2026-09-01
+
+[[document]]
+file = "Yonetim_Kurulu_Tutanagi_2024-09_TARANMIS.pdf"
+access_level = "internal"
+effective_date = 2024-09-12

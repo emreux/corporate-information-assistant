@@ -1,0 +1,9 @@
+# CIA model server: the GPU machine (embedding + reranking).
+# Install PyTorch with CUDA first, following https://pytorch.org/get-started/locally/
+torch
+sentence-transformers
+fastapi
+uvicorn
+python-dotenv
+pydantic
+httpx                   # only smoke_test.py
